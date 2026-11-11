@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic scan data; no real network identifiers. -->
+<nmaprun>
+  <host>
+    <status state="up" reason="syn-ack"/>
+    <address addr="192.0.2.1" addrtype="ipv4"/>
+    <hostnames><hostname name="example-router"/></hostnames>
+    <ports>
+      <port protocol="udp" portid="53">
+        <state state="open"/>
+        <service name="domain"/>
+      </port>
+    </ports>
+  </host>
+</nmaprun>
