@@ -8,9 +8,8 @@ from .models import Device
 
 class Category(str, Enum):
     NETWORKING = "Likely networking equipment"
-    STREAMING = "Possible camera or streaming device"
-    IDENTIFIED = "Other identified device"
-    UNKNOWN = "Unknown device"
+    STREAMING = "Possible streaming device"
+    UNKNOWN = "Device type unknown"
 
 
 @dataclass(frozen=True)
@@ -67,18 +66,9 @@ def classify_device(device: Device) -> Classification:
             observations + assumptions,
             limits + ("Computers and other devices can also provide these services.",),
             observations, assumptions)
-    reasons = []
-    if device.manufacturers:
-        reasons.append(f"The scan reports a hardware manufacturer: {', '.join(device.manufacturers)}.")
-    if device.hostnames:
-        reasons.append(f"The scan reports a device name: {', '.join(device.hostnames)}.")
-    if reasons:
-        assumptions = ("The reported name or manufacturer provides an identity clue, but the device type remains unconfirmed.",)
-        return Classification(Category.IDENTIFIED, observations + assumptions, limits + (
-            "A manufacturer or device name is an identity clue, not confirmation of device type. Espressif hardware alone does not indicate a camera.",),
-            observations, assumptions)
-    assumptions = ("The scan did not provide enough information to identify this device.",)
+    assumptions = ("No service evidence establishes a device type. A reported manufacturer or name is only a clue; device type remains unknown.",)
     return Classification(Category.UNKNOWN,
         observations + assumptions,
-        limits + ("Unknown means unidentified. It does not mean suspicious or malicious.",),
+        limits + ("Unknown means unidentified. It does not mean suspicious or malicious.",
+                  "A manufacturer or device name does not confirm device type. Espressif hardware alone does not indicate a camera."),
         observations, assumptions)

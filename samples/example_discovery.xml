@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic discovery only; documentation IPs and locally administered MACs. -->
+<nmaprun>
+  <host><status state="up" reason="arp-response"/><address addr="192.0.2.1" addrtype="ipv4"/><address addr="02:00:00:00:00:01" addrtype="mac" vendor="Example Components 1"/></host>
+  <host><status state="up" reason="arp-response"/><address addr="192.0.2.2" addrtype="ipv4"/><address addr="02:00:00:00:00:02" addrtype="mac" vendor="Example Components 2"/></host>
+  <host><status state="up" reason="arp-response"/><address addr="192.0.2.3" addrtype="ipv4"/><address addr="02:00:00:00:00:03" addrtype="mac" vendor="Example Components 3"/></host>
+  <host><status state="up" reason="arp-response"/><address addr="192.0.2.4" addrtype="ipv4"/><address addr="02:00:00:00:00:04" addrtype="mac" vendor="Example Components 4"/></host>
+  <host><status state="up" reason="arp-response"/><address addr="192.0.2.5" addrtype="ipv4"/><address addr="02:00:00:00:00:05" addrtype="mac" vendor="Example Components 5"/></host>
+  <host><status state="up" reason="arp-response"/><address addr="192.0.2.6" addrtype="ipv4"/></host>
+</nmaprun>

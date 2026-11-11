@@ -3,9 +3,59 @@
 A free, open-source, local-first Windows application in development, helping
 people identify home network devices through accessible, plain-English explanations.
 
-Phase 1 provides a Python analysis library. A Windows interface and automatic
-discovery are future work. This library reads existing Nmap `-oX` XML files;
-it does not run scans, upload data, or require Nmap to parse saved results.
+Phase 1 provides a Python analysis library. Phase 2 adds consent-based Windows
+network discovery using Nmap. Saved Nmap XML can still be analyzed offline
+without installing Nmap. Guardian processes scans locally and does not upload them. Automatic file synchronisation
+(such as OneDrive) can copy locally saved reports to cloud storage. Save outside
+synced folders if you want reports to remain only on this computer.
+
+## Discover your home network (Windows)
+
+Install Nmap yourself using the Windows installer at https://nmap.org/download.html
+with its Npcap option, then reopen PowerShell. Guardian checks PATH and common
+Program Files installation directories; it never installs software.
+
+```powershell
+uv run python -m guardian scan --output report.html --dry-run
+uv run python -m guardian scan --output report.html
+```
+
+Review the displayed interface and scan scope. If multiple connected private IPv4
+addresses are available, choose your home Wi-Fi or Ethernet from the numbered list.
+VPN, virtual, and unverified adapters always require explicit selection. Enter
+`yes` at the consent prompt only if you own or have permission to scan that network.
+Enter anything else to cancel. Dry run reads local settings and shows the intended
+command without invoking Nmap or writing a report. There is no unattended consent
+flag, background scan, or scheduled scan.
+
+Only RFC 1918 private IPv4 subnets are eligible (10/8, 172.16/12, 192.168/16).
+Public, loopback, link-local, disconnected, and invalid configurations are excluded.
+The scope never exceeds 256 addresses: larger subnets are limited to the /24
+containing the selected local address; smaller subnets retain their prefix.
+There is no arbitrary target/range option. Settings are rechecked after consent.
+
+The Nmap command uses `-sn` for [host discovery](https://nmap.org/book/man-host-discovery.html),
+`-n` to disable DNS lookups, the selected local source address, and XML on stdout.
+No port/service/vulnerability scans, camera access, credentials, or exploits are used.
+XML is parsed in memory by the existing parser and the existing classifier and HTML
+writer produce the standalone report. Guardian does not upload results; file-sync software may upload saved files. Existing output files
+are replaced. Report totals separate responding records from unidentified records
+and possible streaming classifications; unidentified does not mean dangerous.
+
+Limitations: Windows PowerShell networking cmdlets and Nmap/Npcap are required.
+Adapter detection is conservative and uses Windows hardware metadata plus name
+heuristics; adapter names cannot reliably identify every VPN. Active VPN routing
+or overlapping subnets can affect which interface Nmap uses even with a selected
+source address; disconnect a VPN before scanning your home network. The scope
+can omit most of a large subnet. Discovery may miss sleeping or filtered devices.
+It normally provides no hostnames (DNS is disabled) or service evidence, so many
+devices will remain unidentified and camera/streaming classification is unlikely.
+Detection times out after 20 seconds and discovery after 120 seconds; failures do
+not generate a report. No live scan is exercised by the automated tests.
+
+Generated HTML, XML, Nmap outputs, and `scan-results/` are ignored by Git; synthetic
+XML fixtures under `samples/` remain available. Keep private results outside that
+fixture directory and do not force-add them to Git.
 
 ## Development
 
@@ -49,12 +99,13 @@ Rules use reported service names, with the following precedence:
 
 | Category | Evidence | Limitation |
 | --- | --- | --- |
-| Possible camera or streaming device | Open RTSP/RTSPS service | Potential video streaming; never confirmation of a camera |
+| Possible streaming device | Open RTSP/RTSPS service | Potential video streaming; never confirmation of a camera |
 | Likely networking equipment | Open DNS (`domain`) or DHCP service | Computers can also provide these services |
-| Other identified device | Reported manufacturer or hostname | An identity clue, not a verified device type |
-| Unknown device | Insufficient identity or service clues | Unidentified does not mean suspicious or malicious |
+| Device type unknown | No supported service evidence for a type, even if a manufacturer or hostname is reported | Names and manufacturers are separate clues, not verified identities; unknown does not mean dangerous |
 
-Port numbers alone do not determine device type. Espressif hardware alone does
+IP addresses, port numbers, manufacturers, and hostnames alone do not determine
+device type. The former `Category.IDENTIFIED` category has been removed; callers
+should use `Category.UNKNOWN` for manufacturer-only or name-only records. Espressif hardware alone does
 not indicate a camera. All results include reasons and limitations, and none
 constitute a safety or threat verdict. Every classification exposes a plain-English
 `explanation` combining its reasons and limitations; empty reasons are rejected.
@@ -87,26 +138,32 @@ from guardian import parse_nmap_file, write_html_report
 write_html_report(parse_nmap_file("scan.xml"), "report.html")
 ```
 
-Open `report.html` in a browser. Each device includes a suggested category,
-scan-reported details, clearly separated assumptions, and plain-English
-limitations. Missing information and empty scans are explained without implying
-safety or danger. The report uses semantic headings, readable text, a responsive
-layout, and print styles. It has no scripts, remote assets, or runtime dependencies.
-Each device has a clearly labelled **Plain-English explanation** describing what
-the clues suggest, with assumptions distinguished from scan observations and
-limitations shown alongside the explanation.
-Suggested next steps are tailored to the classification: compare devices you
-recognize, use official apps or instructions, review updates and sharing where
-appropriate, and seek trusted help for unfamiliar devices. Guidance recommends
-identifying a device before blocking it or changing settings and acknowledges
-that changes may affect personal safety on a network controlled by someone else.
-Every report, including an empty one, explains the limits of network discovery:
-scan scope, sleeping or unresponsive devices, separate networks, changing addresses,
-possible duplicate records, uncertain identity clues, and the inability to prove
-security, camera presence, recording activity, or device ownership.
-For nontechnical readers, the report includes a short reading guide, an optional
-plain-language glossary, and explanations of services and ports. Raw scan status
-and response codes sit in an optional technical-details section.
+Open `report.html` in a browser. The opening **At a glance** summary shows record
+counts, explains what discovery checks, and gives a concrete first step: compare
+your router's connected-device list with devices you own. A manufacturer clue is
+shown separately from the suggested device type. Basic discovery does not inspect
+ports or services; missing service information never means no services are running.
+For imported XML, absence of open ports cannot establish which checks were performed.
+The report does not infer scan coverage from missing data or perform extra scans.
+
+Each device has a short explanation, reported observations, one next step, and
+optional technical details. Shared explanations and discovery limitations are in
+one native expandable help section, available without scripts or an internet
+connection. It covers uncertain clues, scan scope, sleeping devices, changing
+addresses, possible duplicate records, and limits on security or camera conclusions.
+The report uses semantic headings, readable text, responsive layout, and print
+styles. Guidance recommends identifying a device before blocking it or changing
+settings and seeking trusted help if changes could affect personal safety.
+
+Generate the six-device synthetic discovery example (no real network data):
+
+```powershell
+uv run python -m guardian report samples/example_discovery.xml --output synthetic-example-report.html
+```
+
+All six records have unknown device types, including those with manufacturer
+clues. The existing `samples/example_scan.xml` demonstrates imported service evidence.
+
 All scan text is escaped as text, including hostnames and service details.
 The report prominently displays **Total discovered devices**, counting supplied
 device records once each, regardless of address count or response status. It

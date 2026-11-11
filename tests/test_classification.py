@@ -38,7 +38,7 @@ def test_streaming_is_evidence_not_camera_confirmation(name):
 
 def test_espressif_alone_is_not_a_camera():
     result = classify_device(Device(manufacturers=("Espressif Inc.",)))
-    assert result.category == Category.IDENTIFIED
+    assert result.category == Category.UNKNOWN
     assert any("alone does not indicate a camera" in text for text in result.limitations)
 
 
@@ -61,7 +61,7 @@ def test_port_number_alone_does_not_classify_camera():
 
 
 def test_hostname_is_identity_clue():
-    assert classify_device(Device(hostnames=("office-pc",))).category == Category.IDENTIFIED
+    assert classify_device(Device(hostnames=("office-pc",))).category == Category.UNKNOWN
 
 
 def test_streaming_takes_precedence_and_closed_service_is_ignored():
@@ -72,3 +72,13 @@ def test_streaming_takes_precedence_and_closed_service_is_ignored():
     assert classify_device(device).category == Category.NETWORKING
     both = Device(open_ports=device.open_ports + (Port(8554, "tcp", Service("rtsp")),))
     assert classify_device(both).category == Category.STREAMING
+
+
+@pytest.mark.parametrize("device", [
+    Device(ip_addresses=("192.168.1.1",)),
+    Device(manufacturers=("Router Camera Corporation",)),
+    Device(hostnames=("camera-router",)),
+    Device(open_ports=(Port(53, "udp"), Port(554, "tcp"))),
+])
+def test_identity_clues_and_port_numbers_never_establish_type(device):
+    assert classify_device(device).category == Category.UNKNOWN
