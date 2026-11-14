@@ -1,177 +1,81 @@
 # Home Network Guardian
 
-A free, open-source, local-first Windows application in development, helping
-people identify home network devices through accessible, plain-English explanations.
+A free, open-source Windows tool that helps you collect privacy-filtered clues about devices on your home network. No Python, accounts, subscriptions, or AI integration.
 
-Phase 1 provides a Python analysis library. Phase 2 adds consent-based Windows
-network discovery using Nmap. Saved Nmap XML can still be analyzed offline
-without installing Nmap. Guardian processes scans locally and does not upload them. Automatic file synchronisation
-(such as OneDrive) can copy locally saved reports to cloud storage. Save outside
-synced folders if you want reports to remain only on this computer.
+## Use it
 
-## Discover your home network (Windows)
+1. Install **Nmap for Windows**, including its **Npcap** option, from https://nmap.org/download.html. Guardian does not install software for you.
+2. Extract the Guardian folder. Keep **Start Guardian.bat**, **Guardian.ps1**, and **AI_Prompt.txt** together.
+3. Connect to your home Wi-Fi or Ethernet. Disconnect VPNs and unused network connections.
+4. Double-click **Start Guardian.bat**. Read the permission dialog. Choose **Scan my network** only if you own or have permission to inspect that network. Choose **Cancel** to stop without scanning.
+5. Wait up to five minutes for scanning. A results popup shows the discovered device count and provides **Copy for AI**, **Open Report**, and **Close** buttons.
+6. Choose **Open Report** to review the saved text in Notepad. **Copy for AI** copies the complete saved report, including its AI prompt and scan evidence. Paste it into your preferred AI assistant yourself. If you edit the report in Notepad, save before using Copy for AI.
 
-Install Nmap yourself using the Windows installer at https://nmap.org/download.html
-with its Npcap option, then reopen PowerShell. Guardian checks PATH and common
-Program Files installation directories; it never installs software.
+The file is saved in **%LOCALAPPDATA%\HomeNetworkGuardian\AI_Review.txt**. To find it manually, paste that folder path into File Explorer. Each completed run replaces the previous file. No raw scan files are saved.
 
-```powershell
-uv run python -m guardian scan --output report.html --dry-run
-uv run python -m guardian scan --output report.html
-```
+**Pasting into an AI service shares the selected information with that service.** Guardian itself never uploads anything or connects to AI services. Nothing is copied until you activate Copy for AI, and no website opens automatically. Windows clipboard history or syncing may retain copied information if enabled. The app works without an AI account. Its output is also readable without AI.
 
-Review the displayed interface and scan scope. If multiple connected private IPv4
-addresses are available, choose your home Wi-Fi or Ethernet from the numbered list.
-VPN, virtual, and unverified adapters always require explicit selection. Enter
-`yes` at the consent prompt only if you own or have permission to scan that network.
-Enter anything else to cancel. Dry run reads local settings and shows the intended
-command without invoking Nmap or writing a report. There is no unattended consent
-flag, background scan, or scheduled scan.
+## If something goes wrong
 
-Only RFC 1918 private IPv4 subnets are eligible (10/8, 172.16/12, 192.168/16).
-Public, loopback, link-local, disconnected, and invalid configurations are excluded.
-The scope never exceeds 256 addresses: larger subnets are limited to the /24
-containing the selected local address; smaller subnets retain their prefix.
-There is no arbitrary target/range option. Settings are rechecked after consent.
+- **Nmap or Npcap missing:** re-run the official Nmap installer and select Npcap. Installation may require administrator assistance. Guardian does not elevate itself.
+- **More than one network or no suitable network:** disconnect VPNs and unused adapters, connect to your home network, and try again. Guardian does not guess which network you meant.
+- **Windows blocks the script:** do not disable security policies. Ask a trusted administrator to review and approve the files. Organisation-managed devices may prohibit this tool. A failed launcher may show a console message so the error remains visible.
+- **Scanning errors or timeout:** completed device results are retained where available. Read the incomplete-check notes. A timed-out discovery cannot reliably recover devices from truncated XML.
+- **Results popup unavailable:** Guardian opens the saved report in Notepad instead.
+- **Clipboard unavailable:** the popup explains the problem; retry or use Open Report to copy manually.
+- **Notepad does not open:** a message shows where the file was saved. Open it yourself with a text editor.
 
-The Nmap command uses `-sn` for [host discovery](https://nmap.org/book/man-host-discovery.html),
-`-n` to disable DNS lookups, the selected local source address, and XML on stdout.
-No port/service/vulnerability scans, camera access, credentials, or exploits are used.
-XML is parsed in memory by the existing parser and the existing classifier and HTML
-writer produce the standalone report. Guardian does not upload results; file-sync software may upload saved files. Existing output files
-are replaced. Report totals separate responding records from unidentified records
-and possible streaming classifications; unidentified does not mean dangerous.
+## What is checked
 
-Limitations: Windows PowerShell networking cmdlets and Nmap/Npcap are required.
-Adapter detection is conservative and uses Windows hardware metadata plus name
-heuristics; adapter names cannot reliably identify every VPN. Active VPN routing
-or overlapping subnets can affect which interface Nmap uses even with a selected
-source address; disconnect a VPN before scanning your home network. The scope
-can omit most of a large subnet. Discovery may miss sleeping or filtered devices.
-It normally provides no hostnames (DNS is disabled) or service evidence, so many
-devices will remain unidentified and camera/streaming classification is unlikely.
-Detection times out after 20 seconds and discovery after 120 seconds; failures do
-not generate a report. No live scan is exercised by the automated tests.
+One connected physical private IPv4 network is eligible: 10.x.x.x, 172.16.x.x through 172.31.x.x, or 192.168.x.x. The automatic scope never exceeds 256 addresses; larger subnets are restricted to the containing /24. Network settings are checked again after consent.
 
-Generated HTML, XML, Nmap outputs, and `scan-results/` are ignored by Git; synthetic
-XML fixtures under `samples/` remain available. Keep private results outside that
-fixture directory and do not force-add them to Git.
+One permission covers discovery and limited service inspection. Only responding discovered addresses are inspected, sequentially, on TCP ports **80,81,443,554,8000,8080,8554,8899**. Nmap uses lightweight service detection (intensity 0), one retry, a scan rate cap of 10 packets/second, and a 100ms scan delay. These scan controls are not a strict cap on all service/script traffic. Only the explicitly selected `ssl-cert` and `rtsp-methods` scripts are requested. Guardian does not request passwords, authentication, vulnerabilities, stream URLs, or video playback. No devices are blocked or changed.
 
-## Development
+Discovery has a 120-second process timeout; each service process has at most 60 seconds, a 45-second host timeout, and a 10-second script timeout. All scanning shares a five-minute deadline. Timed-out Nmap processes are terminated, with up to five seconds allowed for termination. No further scans start if termination fails; the report explains that administrator help is needed. Report writing and opening Notepad happen after scanning and are outside that deadline.
 
-Requires Python 3.11 or later. From the repository directory in PowerShell:
+## Privacy and limitations
+
+Devices are numbered. IP addresses, MAC addresses, hostnames, serial numbers, certificate identities, and raw service banners are not included. Manufacturer clues are reduced to a small recognised-name vocabulary; unfamiliar names are withheld. Raw certificate and RTSP output are replaced by presence statements. This conservative filtering loses detail, but avoids copying hidden personal identifiers. Counts and service combinations may still reveal household information. File-sync software can upload files independently of Guardian.
+
+Nmap response-based identification is distinguished from port-based guesses. Neither is independently verified. Manufacturers do not establish device type; RTSP does not confirm camera hardware or recording. Unknown does not mean malicious. Sleeping devices, firewalls, guest networks, larger subnets and uncommon ports can hide devices or services. Completed processes may still contain individual probe timeouts. No result establishes that your network is safe or unsafe.
+
+The prepared prompt asks for plain-English explanations, evidence-based possibilities, alternative explanations, safe next steps, and optional public manufacturer research with reliable sources. An AI response is advice to review, not verified identification. No public research is performed by Guardian.
+
+## Developer validation
+
+To test the results popup with the existing saved report without running a scan:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-.\.venv\Scripts\python.exe -m pytest
+powershell.exe -NoProfile -STA -File .\tools\Show-SavedReport.ps1
 ```
 
-Runtime dependencies: Python standard library only. Pytest is a development dependency.
+You can also pass `-Path "C:\local-folder\AI_Review.txt"`. This reads the device count from the report and displays the same popup without saving, scanning, or automatically copying. Copy for AI reads the complete file when clicked and shows **Copied successfully**. Close or Escape dismisses the popup. A missing or unreadable report produces a plain-English message.
 
-## Use the engine
+Runtime: Windows PowerShell 5.1 and Windows networking cmdlets; Nmap/Npcap are separate prerequisites. The launcher does not bypass execution policy, change machine settings, download dependencies, or request elevation. It uses built-in permission/error dialogs, not a separate GUI application.
 
-```python
-from guardian import classify_device, parse_nmap_file, NmapParseError
-
-try:
-    devices = parse_nmap_file("scan.xml")
-except NmapParseError as error:
-    print(error)
-else:
-    for device in devices:
-        result = classify_device(device)
-        print(device.hostnames or device.ip_addresses or ("Unnamed device",))
-        print(result.category.value)
-        print(result.explanation)
-```
-
-`parse_nmap_xml` also accepts XML text or bytes. Devices retain IPv4 and IPv6
-addresses, MAC addresses, manufacturers, hostnames, status and its reason, and
-open TCP/UDP ports with available service details. Missing information stays
-empty or unknown. Closed, filtered, and `open|filtered` ports are not reported as
-confirmed open ports. Malformed XML and invalid open port numbers produce
-`NmapParseError`; unreadable files produce the same public error type.
-
-## How classifications work
-
-Rules use reported service names, with the following precedence:
-
-| Category | Evidence | Limitation |
-| --- | --- | --- |
-| Possible streaming device | Open RTSP/RTSPS service | Potential video streaming; never confirmation of a camera |
-| Likely networking equipment | Open DNS (`domain`) or DHCP service | Computers can also provide these services |
-| Device type unknown | No supported service evidence for a type, even if a manufacturer or hostname is reported | Names and manufacturers are separate clues, not verified identities; unknown does not mean dangerous |
-
-IP addresses, port numbers, manufacturers, and hostnames alone do not determine
-device type. The former `Category.IDENTIFIED` category has been removed; callers
-should use `Category.UNKNOWN` for manufacturer-only or name-only records. Espressif hardware alone does
-not indicate a camera. All results include reasons and limitations, and none
-constitute a safety or threat verdict. Every classification exposes a plain-English
-`explanation` combining its reasons and limitations; empty reasons are rejected.
-Explanations label `observations` (what the supplied scan reports) separately from
-`assumptions` (the rules' interpretation). Observations are not independent
-confirmation of a device's identity, behavior, or current state. The category
-is an interpretation; reported service names and manufacturer names may be guesses
-made by the scanner. `reasons` retains the combined evidence and interpretation.
-Scan information can be incomplete,
-incorrect, or outdated; hostnames and manufacturers are reported clues.
-
-Application modules live in `src/guardian`: `models.py` holds observations,
-`parser.py` reads XML, and `classification.py` explains classification rules.
-Tests use synthetic scan data and do not access your network.
-
-## Offline HTML report
-
-Generate a report from the included synthetic scan using the command line:
+Tests use **Pester 3.4 or 4.x**, with Nmap and Notepad side effects mocked. Windows Forms tests display and automatically close real popups; run in an interactive Windows desktop session. A separate-process regression test removes the original Guardian function scope, clicks every button, checks the entire actual clipboard text (including Unicode and a long synthetic report), and restores the previous clipboard data. Only synthetic text is copied; Windows clipboard history or syncing may retain it if enabled. Other tests simulate clipboard/Notepad failures and reject non-STA access. Pester is only a developer dependency. Run from the repository folder:
 
 ```powershell
-uv run python -m guardian report samples/example_scan.xml --output report.html
+powershell.exe -NoProfile -STA -File .\tests\Run-Tests.ps1
+powershell.exe -NoProfile -File .\samples\Generate-Example.ps1
 ```
 
-Supply your own Nmap XML path in place of `samples/example_scan.xml`.
-The `--output` option is required; an existing output file is replaced.
+The second command generates **samples\AI_Review.example.txt** from synthetic XML only. It does not scan or launch Notepad. Tests cover scope, consent, commands, deadlines, process cleanup, parsing, redaction, output, and Notepad invocation. Generated private reports and scan files are ignored; only named synthetic fixtures and the synthetic text example are retained. Never force-add real scan results.
 
-```python
-from guardian import parse_nmap_file, write_html_report
+Before distribution, manually validate on Windows with Nmap/Npcap: cancellation, an authorised real scan, Notepad launch, an installation path containing spaces, missing prerequisites, ambiguous networks, and blocked-script behavior. Test display scaling and keyboard access. Distribution may require signing and organisational approval; the tool never bypasses those requirements.
 
-write_html_report(parse_nmap_file("scan.xml"), "report.html")
-```
+MIT licensed. See [LICENSE](LICENSE).
 
-Open `report.html` in a browser. The opening **At a glance** summary shows record
-counts, explains what discovery checks, and gives a concrete first step: compare
-your router's connected-device list with devices you own. A manufacturer clue is
-shown separately from the suggested device type. Basic discovery does not inspect
-ports or services; missing service information never means no services are running.
-For imported XML, absence of open ports cannot establish which checks were performed.
-The report does not infer scan coverage from missing data or perform extra scans.
+## Distribution and storage safeguards
 
-Each device has a short explanation, reported observations, one next step, and
-optional technical details. Shared explanations and discovery limitations are in
-one native expandable help section, available without scripts or an internet
-connection. It covers uncertain clues, scan scope, sleeping devices, changing
-addresses, possible duplicate records, and limits on security or camera conclusions.
-The report uses semantic headings, readable text, responsive layout, and print
-styles. Guidance recommends identifying a device before blocking it or changing
-settings and seeking trusted help if changes could affect personal safety.
+Build the end-user ZIP with `powershell.exe -NoProfile -File .\tools\Build-Release.ps1`.
+The verified allowlist includes only Start Guardian.bat, Guardian.ps1, AI_Prompt.txt,
+README.md and LICENSE. Never ZIP the repository folder: ignored files can include
+private reports. Developer tools, fixtures, tests and Git metadata are excluded.
 
-Generate the six-device synthetic discovery example (no real network data):
-
-```powershell
-uv run python -m guardian report samples/example_discovery.xml --output synthetic-example-report.html
-```
-
-All six records have unknown device types, including those with manufacturer
-clues. The existing `samples/example_scan.xml` demonstrates imported service evidence.
-
-All scan text is escaped as text, including hostnames and service details.
-The report prominently displays **Total discovered devices**, counting supplied
-device records once each, regardless of address count or response status. It
-explains that this is not a live count of connected devices.
-
-`generate_html_report(devices)` returns HTML without writing a file.
-`write_html_report(devices, path)` saves UTF-8 HTML, replaces an existing file at
-that path, and propagates filesystem errors as `OSError`. Both accept an optional
-`title` keyword. Reports contain network identifiers, so share them thoughtfully.
-
-Licensed under the MIT licence; see [LICENSE](LICENSE).
+Report saving requires a fixed local drive and rejects UNC paths, alternate data
+streams, reparse points (including junctions) and known OneDrive roots. If storage
+validation fails, Guardian stops without choosing another folder. Other sync or
+backup software cannot be detected reliably; check your own settings. The report
+inherits the local user's folder permissions; it is not encrypted. Manually edited
+reports and prompts can contain personal data; review them before copying.

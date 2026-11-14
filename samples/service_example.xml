@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Entirely synthetic documentation addresses and invented equipment. Never a real scan. -->
+<nmaprun>
+  <host><status state="up"/><address addr="192.0.2.1" addrtype="ipv4"/>
+    <address addr="02:00:00:00:00:01" addrtype="mac" vendor="Cisco (synthetic manufacturer clue)"/>
+    <hostnames><hostname name="example-router"/></hostnames>
+    <ports><port protocol="tcp" portid="443"><state state="open"/>
+      <service name="http" tunnel="ssl" method="probed" product="Example router interface"/>
+      <script id="guardian-web"><elem key="title">Example router settings</elem><elem key="server">Example embedded web server</elem><elem key="content-type">text/html</elem></script>
+      <script id="ssl-cert" output="Subject: commonName=example-router&#10;Issuer: Example local certificate&#10;Not valid before: 2026-01-01&#10;Not valid after: 2030-01-01"/>
+    </port></ports>
+  </host>
+  <host><status state="up"/><address addr="192.0.2.20" addrtype="ipv4"/>
+    <hostnames><hostname name="example-media-box"/></hostnames>
+    <ports><port protocol="tcp" portid="8554"><state state="open"/><service name="rtsp" method="probed" product="Example streaming service"/>
+      <script id="rtsp-methods" output="OPTIONS, DESCRIBE, SETUP, PLAY, TEARDOWN"/>
+    </port></ports>
+  </host>
+  <host><status state="up"/><address addr="192.0.2.30" addrtype="ipv4"/>
+    <address addr="02:00:00:00:00:30" addrtype="mac" vendor="Espressif (synthetic manufacturer clue)"/>
+    <hostnames><hostname name="example-thermostat"/></hostnames>
+    <ports><port protocol="tcp" portid="80"><state state="open"/><service name="http" method="probed"/>
+      <script id="guardian-web"><elem key="title">Thermostat settings</elem><elem key="content-type">text/html</elem></script>
+    </port></ports>
+  </host>
+  <host><status state="up"/><address addr="192.0.2.40" addrtype="ipv4"/>
+    <hostnames><hostname name="example-printer"/></hostnames>
+    <ports><port protocol="tcp" portid="80"><state state="open"/><service name="http" method="probed"/>
+      <script id="guardian-web"><elem key="title">Printer settings</elem></script>
+    </port></ports>
+  </host>
+  <host><status state="up"/><address addr="192.0.2.50" addrtype="ipv4"/>
+    <address addr="02:00:00:00:00:50" addrtype="mac" vendor="Example Components"/>
+  </host>
+</nmaprun>
